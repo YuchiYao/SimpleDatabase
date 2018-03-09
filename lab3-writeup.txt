@@ -1,0 +1,30 @@
+Design Decision: 
+I think the lab sheet states every thing clearly. There is no much decision we need to make here. We just follow the instruction. 
+
+But we have met some problems. In the steal function, we feel a bit hard to understand how it works. Therefore, we produce a bug. We replace right child and left child in wrong place. 
+
+The rest of the lab is quite hard, but we still spend lots of time on debuging. 
+
+  
+
+API improvement:
+
+We carefully work through the whole project of which the structure is designed perfectly.   
+
+Code performance: 
+
+We have passed all the provided test case for LAB3. Meanwhile, we have considered some more un-valid cases for some function. 
+
+
+
+LAB conclusion: 
+	
+
+We spent 10 hours per person. We both think this LAB is well structured, but we found there are some errors in the lab sheet. But we forget to see the piazza. So we spends 5 hours on the transaction test case. 
+
+
+LAB Partner: 
+	
+Yuchi Yao, NetID: yyo5315
+	Huaijing Chen, NetID: hci7325
+
