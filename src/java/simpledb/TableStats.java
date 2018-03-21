@@ -1,5 +1,6 @@
 package simpledb;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
@@ -66,6 +67,19 @@ public class TableStats {
      */
     static final int NUM_HIST_BINS = 100;
 
+    private int tableid;
+    private int ioCostPerPage;
+    private TupleDesc td;
+    private DbFile file;
+    private DbFileIterator iter;
+    private int totalTuples;
+
+    private HashMap<String, IntHistogram> intHistMap;
+    private HashMap<String, StringHistogram> strHistMap;
+    private HashMap<String, Integer> maxsForIntHist;
+    private HashMap<String, Integer> minsForIntHist;
+
+    private ArrayList<Integer> lstOfIntIndex;
     /**
      * Create a new TableStats object, that keeps track of statistics on each
      * column of a table
@@ -85,6 +99,100 @@ public class TableStats {
         // necessarily have to (for example) do everything
         // in a single scan of the table.
         // some code goes here
+        this.tableid = tableid;
+        this.ioCostPerPage = ioCostPerPage;
+        this.file = Database.getCatalog().getDatabaseFile(tableid);
+        this.td = file.getTupleDesc();
+        TransactionId tid = new TransactionId();
+        this.iter = file.iterator(tid);
+
+        this.totalTuples = 0;
+
+        // update the max and min for each field
+        minsForIntHist = new HashMap<>();
+        maxsForIntHist = new HashMap<>();
+        setMaxsAndMins();
+
+        // initialize histogram map
+        intHistMap = new HashMap<>();
+        strHistMap = new HashMap<>();
+        initMap();
+
+        // insert field into the corresponding histogram
+        insertToHist();
+    }
+
+    private void setMaxsAndMins(){
+        try{
+            iter.rewind();
+            while(iter.hasNext()){
+                Tuple tuple = iter.next();
+                totalTuples++;
+                for(int i = 0; i < td.numFields(); i++){
+
+                    if(td.getFieldType(i)==Type.INT_TYPE){
+                        String fieldName = td.getFieldName(i);
+                        IntField field =  (IntField) tuple.getField(i);
+                        Integer value = field.getValue();
+
+                        Integer currMax = maxsForIntHist.getOrDefault(fieldName, Integer.MIN_VALUE);
+                        Integer newMax = Integer.max(currMax, value);
+                        Integer currMin = minsForIntHist.getOrDefault(fieldName, Integer.MAX_VALUE);
+                        Integer newMin = Integer.min(currMin, value);
+
+                        maxsForIntHist.put(fieldName, newMax);
+                        minsForIntHist.put(fieldName, newMin);
+                    }
+                }
+            }
+        } catch (DbException e){
+            e.printStackTrace();
+        } catch (TransactionAbortedException e){
+            e.printStackTrace();
+        }
+    }
+
+    private void initMap(){
+        for(int i = 0; i < td.numFields(); i++){
+            String fieldName = td.getFieldName(i);
+            if(td.getFieldType(i)==Type.INT_TYPE){
+                int min = minsForIntHist.get(fieldName);
+                int max = maxsForIntHist.get(fieldName);
+                IntHistogram intHist = new IntHistogram(NUM_HIST_BINS, min, max);
+                intHistMap.put(fieldName, intHist);
+            }else if(td.getFieldType(i)==Type.STRING_TYPE){
+                StringHistogram strHist = new StringHistogram(NUM_HIST_BINS);
+                strHistMap.put(fieldName, strHist);
+            }
+        }
+    }
+
+    private void insertToHist(){
+        try{
+            iter.rewind();
+            while(iter.hasNext()){
+                Tuple tuple = iter.next();
+
+                for(int i = 0; i < td.numFields(); i++){
+                    String fieldName = td.getFieldName(i);
+                    if(td.getFieldType(i)==Type.INT_TYPE){
+                        IntField field =  (IntField) tuple.getField(i);
+                        Integer value = field.getValue();
+
+                        intHistMap.get(fieldName).addValue(value);
+                    } else if(td.getFieldType(i)==Type.STRING_TYPE) {
+                        StringField field = (StringField) tuple.getField(i);
+                        String value = field.getValue();
+
+                        strHistMap.get(fieldName).addValue(value);
+                    }
+                }
+            }
+        } catch (DbException e){
+            e.printStackTrace();
+        } catch (TransactionAbortedException e){
+            e.printStackTrace();
+        }
     }
 
     /**
@@ -100,6 +208,13 @@ public class TableStats {
      * @return The estimated cost of scanning the table.
      */
     public double estimateScanCost() {
+        if(file.getClass()==BTreeFile.class){
+            BTreeFile bTreeFile = (BTreeFile) file;
+            return bTreeFile.numPages()*ioCostPerPage;
+        } else if(file.getClass()==HeapFile.class){
+            HeapFile heapFile = (HeapFile) file;
+            return heapFile.numPages()*ioCostPerPage;
+        }
         // some code goes here
         return 0;
     }
@@ -115,7 +230,7 @@ public class TableStats {
      */
     public int estimateTableCardinality(double selectivityFactor) {
         // some code goes here
-        return 0;
+        return (int) (totalTuples * selectivityFactor);
     }
 
     /**
@@ -148,7 +263,15 @@ public class TableStats {
      */
     public double estimateSelectivity(int field, Predicate.Op op, Field constant) {
         // some code goes here
-        return 1.0;
+        String fieldName = td.getFieldName(field);
+        if(td.getFieldType(field)==Type.INT_TYPE){
+            IntField con = (IntField) constant;
+            return intHistMap.get(fieldName).estimateSelectivity(op, con.getValue());
+        } else if(td.getFieldType(field)==Type.STRING_TYPE){
+            StringField con = (StringField) constant;
+            return strHistMap.get(fieldName).estimateSelectivity(op, con.getValue());
+        }
+        return 0;
     }
 
     /**
@@ -156,7 +279,7 @@ public class TableStats {
      * */
     public int totalTuples() {
         // some code goes here
-        return 0;
+        return totalTuples;
     }
 
 }

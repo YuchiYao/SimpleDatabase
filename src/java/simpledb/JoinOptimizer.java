@@ -111,7 +111,7 @@ public class JoinOptimizer {
             // HINT: You may need to use the variable "j" if you implemented
             // a join algorithm that's more complicated than a basic
             // nested-loops join.
-            return -1.0;
+            return cost1 + card1 * cost2 + card1 * card2;
         }
     }
 
@@ -155,9 +155,20 @@ public class JoinOptimizer {
             String field2PureName, int card1, int card2, boolean t1pkey,
             boolean t2pkey, Map<String, TableStats> stats,
             Map<String, Integer> tableAliasToId) {
-        int card = 1;
+        int card;
         // some code goes here
-        return card <= 0 ? 1 : card;
+        if(joinOp == Predicate.Op.EQUALS){
+            if(t1pkey){
+                card = card2;
+            }else if(t2pkey){
+                card = card1;
+            }else{
+                card = Integer.max(card1,card2);
+            }
+        } else{
+            card = (int)(0.3 * card1 * card2);
+        }
+        return card;
     }
 
     /**
@@ -220,8 +231,22 @@ public class JoinOptimizer {
         //Not necessary for labs 1--3
 
         // some code goes here
-        //Replace the following
-        return joins;
+        Set<LogicalJoinNode> j = new HashSet<>(joins);
+        PlanCache optJoin = new PlanCache();
+        for(int i = 1; i <= j.size(); i++){
+            for(Set<LogicalJoinNode> joinSet : enumerateSubsets(joins, i)){
+                CostCard bestPlan = new CostCard();
+                bestPlan.cost = Double.MAX_VALUE;
+                for(LogicalJoinNode joinToRemove : joinSet) {
+                    CostCard plan = computeCostAndCardOfSubplan(stats, filterSelectivities, joinToRemove, joinSet, bestPlan.cost , optJoin);
+                    if(plan!=null && plan.cost < bestPlan.cost){
+                        bestPlan = plan;
+                    }
+                }
+                optJoin.addPlan(joinSet, bestPlan.cost, bestPlan.card, bestPlan.plan);
+            }
+        }
+        return optJoin.getOrder(j);
     }
 
     // ===================== Private Methods =================================

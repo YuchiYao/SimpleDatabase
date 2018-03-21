@@ -1,0 +1,44 @@
+Design Decision: 
+
+I think the lab sheet states every thing clearly. There is no much decision we need to make here. We just follow the instruction. 
+
+
+The rest of the lab is quite hard, but we still spend lots of time on debuging. 
+
+Selectivity estimation: 
+
+At first, we need to check the input value is in the range between min and max. If it is not in the range, it will output an zero. And then we define functions for different operator. Then, we need to find the index of bucket before starting returning the (h/w)/ntups. 
+And then, we need to based on the different operator, (like EQUAL, GREATER_THAN ect.), In the part, we need to handle the cases. if the value is smaller than the min in the tuple. For the "GREATER_THAN" operator, the output will be 1. If the value is larger that max for the same operator, the output will be 0. 
+The rest of code is implement as the lab note stated. 
+To make the code looks simple, we use some external functions to make it easy to read. 
+
+
+Cost: 
+The cost part is the easiest part of project. We just follow the function shown in the lab note. 
+
+Join ordering: 
+
+In the pseudocode, there is a d -1. We can not understand what is the meaning of d. But based on the given parameter, we guess it may represent the remove element. Then, all the test cases are passed.  
+
+
+API improvement:
+
+We carefully work through the whole project of which the structure is designed perfectly.   
+
+Code performance: 
+
+We have passed all the provided test case for LAB4. Meanwhile, we have considered some more un-valid cases for some functions. 
+
+
+
+LAB conclusion: 
+	
+
+We spent 5 hours per person. We both think this LAB is well structured.  
+
+
+LAB Partner: 
+	
+Yuchi Yao, NetID: yyo5315
+Huaijing Chen, NetID: hci7325
+
